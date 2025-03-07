@@ -31,13 +31,18 @@ async function show(request, response) {
 
 // 🔹 Criar usuário
 async function create(request, response) {
-  const { nome_usuario, email, senha, telefone, cep, rua, cidade, estado, bairro, numero } = request.body;
-  
   try {
+    const { nome_usuario, email, senha, telefone, cep, rua, cidade, estado, bairro, numero } = request.body;
+
+    if (!nome_usuario || !email || !senha) {
+      return response.status(400).json({ erro: "Nome, email e senha são obrigatórios!" });
+    }
+
+    // 🔹 Insere os dados no banco
     const [resultado] = await pool.query(
       `INSERT INTO usuario (nome_usuario, email, senha, telefone, cep, rua, cidade, estado, bairro, numero) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [nome_usuario, email, senha, telefone, cep, rua, cidade, estado, bairro, numero]
+      [nome_usuario, email, senha, telefone || null, cep || null, rua || null, cidade || null, estado || null, bairro || null, numero || null]
     );
 
     return response.status(201).json({ message: "Usuário criado com sucesso", id_usuario: resultado.insertId });
@@ -46,6 +51,7 @@ async function create(request, response) {
     return response.status(500).json({ erro: "Erro ao criar usuário" });
   }
 }
+
 
 // 🔹 Atualizar usuário
 async function update(request, response) {
