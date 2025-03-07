@@ -11,14 +11,14 @@ async function show(request, response) {
 
   try {
     const [resultado] = await pool.query(
-      `SELECT Livro.*, Estoque.quantidade_estoque, Categoria.nome_categoria AS categoria, Autor.nome AS nome_autor
-       FROM Livro
-       LEFT JOIN Estoque ON Livro.id_livro = Estoque.fk_id_livro
-       LEFT JOIN Livro_Categoria ON Livro.id_livro = Livro_Categoria.fk_id_livros
-       LEFT JOIN Categoria ON Livro_Categoria.fk_id_categoria = Categoria.id_categoria
-       LEFT JOIN Autor_Livro ON Livro.id_livro = Autor_Livro.fk_id_livro
-       LEFT JOIN Autor ON Autor_Livro.fk_id_autor = Autor.id_autor
-       WHERE Livro.id_livro = ?;`,
+      `SELECT livro.*, estoque.quantidade_estoque, categoria.nome_categoria AS categoria, autor.nome AS nome_autor
+       FROM livro
+       LEFT JOIN estoque ON livro.id_livro = estoque.fk_id_livro
+       LEFT JOIN livro_categoria ON livro.id_livro = livro_categoria.fk_id_livros
+       LEFT JOIN categoria ON livro_categoria.fk_id_categoria = categoria.id_categoria
+       LEFT JOIN autor_livro ON livro.id_livro = autor_livro.fk_id_livro
+       LEFT JOIN autor ON autor_livro.fk_id_autor = autor.id_autor
+       WHERE livro.id_livro = ?;`,
       [codigo]
     );
 
@@ -44,15 +44,12 @@ async function show(request, response) {
 async function list(request, response) {
   try {
     const [resultado] = await pool.query(
-      `SELECT
-        Livro.*, 
-        Categoria.nome_categoria AS categoria,
-        Autor.nome AS autor
-      FROM Livro
-      LEFT JOIN Livro_Categoria ON Livro.id_livro = Livro_Categoria.fk_id_livros
-      LEFT JOIN Categoria ON Livro_Categoria.fk_id_categoria = Categoria.id_categoria
-      LEFT JOIN Autor_Livro ON Livro.id_livro = Autor_Livro.fk_id_livro
-      LEFT JOIN Autor ON Autor_Livro.fk_id_autor = Autor.id_autor;`
+      `SELECT livro.*, categoria.nome_categoria AS categoria, autor.nome AS autor
+       FROM livro
+       LEFT JOIN livro_categoria ON livro.id_livro = livro_categoria.fk_id_livros
+       LEFT JOIN categoria ON livro_categoria.fk_id_categoria = categoria.id_categoria
+       LEFT JOIN autor_livro ON livro.id_livro = autor_livro.fk_id_livro
+       LEFT JOIN autor ON autor_livro.fk_id_autor = autor.id_autor;`
     );
 
     resultado.forEach((livro) => {
@@ -80,7 +77,7 @@ async function create(request, response) {
 
     // 🔹 Inserir o livro primeiro
     const [livroResult] = await conn.query(
-      `INSERT INTO Livro (nome_livro, descricao, ano_publicacao, quantidade_paginas, foto_capa) 
+      `INSERT INTO livro (nome_livro, descricao, ano_publicacao, quantidade_paginas, foto_capa) 
        VALUES (?, ?, ?, ?, ?)`,
       [nomeLivro, descricao, anoPublicacao, quantidade_paginas, foto_capa_buffer]
     );
@@ -88,35 +85,35 @@ async function create(request, response) {
 
     // 🔹 Inserir o estoque
     await conn.query(
-      `INSERT INTO Estoque (quantidade_estoque, fk_id_livro) VALUES (?, ?)`,
+      `INSERT INTO estoque (quantidade_estoque, fk_id_livro) VALUES (?, ?)`,
       [quantidade_estoque, livroId]
     );
 
     // 🔹 Processar autores
     let autorId;
-    const [autorResult] = await conn.query(`SELECT id_autor FROM Autor WHERE nome = ?`, [autores]);
+    const [autorResult] = await conn.query(`SELECT id_autor FROM autor WHERE nome = ?`, [autores]);
 
     if (autorResult.length === 0) {
-      const [novoAutorResult] = await conn.query(`INSERT INTO Autor (nome) VALUES (?)`, [autores]);
+      const [novoAutorResult] = await conn.query(`INSERT INTO autor (nome) VALUES (?)`, [autores]);
       autorId = novoAutorResult.insertId;
     } else {
       autorId = autorResult[0].id_autor;
     }
 
-    await conn.query(`INSERT INTO Autor_Livro (fk_id_livro, fk_id_autor) VALUES (?, ?)`, [livroId, autorId]);
+    await conn.query(`INSERT INTO autor_livro (fk_id_livro, fk_id_autor) VALUES (?, ?)`, [livroId, autorId]);
 
     // 🔹 Processar categoria
     let fk_id_categoria;
-    const [categoriaResult] = await conn.query(`SELECT id_categoria FROM Categoria WHERE nome_categoria = ?`, [categoria_principal]);
+    const [categoriaResult] = await conn.query(`SELECT id_categoria FROM categoria WHERE nome_categoria = ?`, [categoria_principal]);
 
     if (categoriaResult.length === 0) {
-      const [categoriaCriadaResult] = await conn.query(`INSERT INTO Categoria (nome_categoria) VALUES (?)`, [categoria_principal]);
+      const [categoriaCriadaResult] = await conn.query(`INSERT INTO categoria (nome_categoria) VALUES (?)`, [categoria_principal]);
       fk_id_categoria = categoriaCriadaResult.insertId;
     } else {
       fk_id_categoria = categoriaResult[0].id_categoria;
     }
 
-    await conn.query(`INSERT INTO Livro_Categoria (fk_id_livros, fk_id_categoria) VALUES (?, ?)`, [livroId, fk_id_categoria]);
+    await conn.query(`INSERT INTO livro_categoria (fk_id_livros, fk_id_categoria) VALUES (?, ?)`, [livroId, fk_id_categoria]);
 
     await conn.commit(); // Confirma a transação
     conn.release();
